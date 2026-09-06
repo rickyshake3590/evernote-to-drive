@@ -9,10 +9,12 @@
  */
 
 // Application password for access control
-// Change this to your desired password
-window.__APP_PASSWORD = 'byeevernote';
+// Set via GitHub Secrets (APP_PASSWORD) in GitHub Actions
+// For local development, set your own password
+window.__APP_PASSWORD = 'APP_PASSWORD_PLACEHOLDER';
 
 // Google OAuth 2.0 Client ID
+// Set via GitHub Secrets (GOOGLE_CLIENT_ID) in GitHub Actions
 // Get this from: https://console.cloud.google.com/
 // Instructions:
 // 1. Go to Google Cloud Console
@@ -21,4 +23,4 @@ window.__APP_PASSWORD = 'byeevernote';
 // 4. Create OAuth 2.0 Web credentials
 // 5. Add authorized redirect URIs (your GitHub Pages URL, localhost:5173 for dev)
 // 6. Copy the Client ID here
-window.__GOOGLE_CLIENT_ID = '346028058051-elmqlvgkhjo94jt4a0hsb7res3dlcnm0.apps.googleusercontent.com';
+window.__GOOGLE_CLIENT_ID = 'GOOGLE_CLIENT_ID_PLACEHOLDER';

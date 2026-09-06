@@ -671,7 +671,7 @@
     const loginBtn = document.getElementById('loginBtn');
     const loginError = document.getElementById('loginError');
     const page = document.querySelector('.page');
-    const CORRECT_PASSWORD = window.__APP_PASSWORD || 'byeevernote';
+    const CORRECT_PASSWORD = window.__APP_PASSWORD || 'APP_PASSWORD_PLACEHOLDER';
 
     function handleLogin() {
       loginError.classList.remove('show');
@@ -1359,7 +1359,7 @@
       }
 
       try {
-        const clientId = window.__GOOGLE_CLIENT_ID || '346028058051-elmqlvgkhjo94jt4a0hsb7res3dlcnm0.apps.googleusercontent.com';
+        const clientId = window.__GOOGLE_CLIENT_ID || 'GOOGLE_CLIENT_ID_PLACEHOLDER';
         googleTokenClient = google.accounts.oauth2.initTokenClient({
           client_id: clientId,
           scope: 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/userinfo.email',
