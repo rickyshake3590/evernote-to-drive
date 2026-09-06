@@ -1,0 +1,1866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Move your notes home — Evernote to Google Docs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    :root {
+      --color-cream: #FBF7F2;
+      --color-cream-dim: #F3ECE3;
+      --color-action: #E8661B;
+      --color-action-hover: #CC5514;
+      --color-success: #6B9E7D;
+      --color-success-dim: #E8F0EA;
+      --color-text-primary: #2A2A2A;
+      --color-text-secondary: #6B6B6B;
+      --color-border: #E8DFD5;
+      --color-error: #C85A4F;
+      --color-error-dim: #FAEBE9;
+      --color-shadow: rgba(42, 42, 42, 0.08);
+      --step-1: 8px;
+      --step-2: 16px;
+      --step-3: 24px;
+      --step-4: 32px;
+      --step-6: 48px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--color-cream);
+      color: var(--color-text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    h1, h2, h3 { font-weight: 600; color: var(--color-text-primary); }
+
+    .headline { font-size: 32px; line-height: 1.2; font-weight: 600; }
+    .subhead { font-size: 19px; line-height: 1.3; font-weight: 500; color: var(--color-text-secondary); }
+    .label { font-size: 14px; font-weight: 500; color: var(--color-text-secondary); }
+
+    a { color: var(--color-action); }
+
+    *:focus-visible {
+      outline: 2px solid var(--color-action);
+      outline-offset: 2px;
+    }
+
+    button {
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      padding: 14px 28px;
+      min-height: 44px;
+      transition: background-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+    }
+
+    .btn-action {
+      background: var(--color-action);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(232, 102, 27, 0.25);
+    }
+    .btn-action:hover { background: var(--color-action-hover); }
+    .btn-action:active { transform: translateY(1px); }
+    .btn-action:disabled { background: var(--color-border); color: var(--color-text-secondary); cursor: not-allowed; box-shadow: none; }
+
+    .btn-quiet {
+      background: transparent;
+      color: var(--color-text-secondary);
+      border: 1px solid var(--color-border);
+    }
+    .btn-quiet:hover { border-color: var(--color-text-secondary); color: var(--color-text-primary); }
+
+    .btn-link {
+      background: none;
+      border: none;
+      color: var(--color-action);
+      padding: 4px 0;
+      font-size: 14px;
+      text-decoration: underline;
+      min-height: auto;
+    }
+
+    /* ---------- Layout ---------- */
+    .page { max-width: 1100px; margin: 0 auto; padding: var(--step-4) var(--step-4) var(--step-6); }
+    .prose { max-width: 640px; }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--step-3) 0;
+      margin-bottom: var(--step-4);
+    }
+    .topbar .mark {
+      font-size: 16px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .topbar .mark-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-action); }
+    .topbar .step-label { font-size: 13px; color: var(--color-text-secondary); font-weight: 500; }
+
+    [hidden] { display: none !important; }
+
+    /* ---------- Hero ---------- */
+    .hero { padding: var(--step-6) 0 var(--step-6); }
+    .hero-visual {
+      display: flex;
+      align-items: center;
+      gap: var(--step-4);
+      margin-bottom: var(--step-6);
+    }
+    .hero-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--color-text-secondary);
+      padding: 10px 16px;
+      border: 1px solid var(--color-border);
+      border-radius: 999px;
+      background: #fff;
+      white-space: nowrap;
+    }
+    .hero-path {
+      position: relative;
+      flex: 1;
+      height: 2px;
+      background: var(--color-border);
+      min-width: 60px;
+    }
+    .hero-dot {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--color-action);
+      transform: translate(-50%, -50%);
+      opacity: 0;
+    }
+    .hero-visual.play .hero-dot {
+      animation: flow 1.8s ease-in-out 0.3s 1;
+    }
+    @keyframes flow {
+      0% { left: 0%; opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { left: 100%; opacity: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .hero-visual.play .hero-dot { animation: none; opacity: 0; }
+    }
+
+    .hero h1 { margin-bottom: var(--step-2); }
+    .hero .subhead { margin-bottom: var(--step-4); }
+
+    .trust-row {
+      display: flex;
+      gap: var(--step-4);
+      flex-wrap: wrap;
+      margin-top: var(--step-6);
+      padding-top: var(--step-4);
+      border-top: 1px solid var(--color-border);
+    }
+    .trust-item {
+      font-size: 14px;
+      color: var(--color-text-secondary);
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .trust-item::before { content: '✓'; color: var(--color-success); font-weight: 700; }
+
+    /* ---------- How it works ---------- */
+    .how-it-works { margin: var(--step-6) 0; padding-top: var(--step-4); border-top: 1px solid var(--color-border); }
+    .how-it-works h2 { font-size: 20px; margin-bottom: var(--step-4); }
+    .step-row {
+      display: flex;
+      gap: var(--step-3);
+      padding: var(--step-2) 0;
+    }
+    .step-row:not(:last-child) { border-bottom: 1px solid var(--color-border); }
+    .step-num {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--color-action);
+      width: 28px;
+      flex-shrink: 0;
+    }
+    .step-body strong { display: block; font-size: 16px; margin-bottom: 2px; }
+    .step-body span { font-size: 14px; color: var(--color-text-secondary); }
+
+    /* ---------- Dropzone ---------- */
+    .upload-block { margin-top: var(--step-6); padding-top: var(--step-4); border-top: 1px solid var(--color-border); }
+    .dropzone {
+      border: 2px dashed var(--color-border);
+      border-radius: 12px;
+      padding: var(--step-6) var(--step-4);
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 150ms ease, background-color 150ms ease;
+    }
+    .dropzone:hover, .dropzone:focus-visible { border-color: var(--color-action); background: #fff; }
+    .dropzone.active { border-color: var(--color-success); background: var(--color-success-dim); }
+    .dropzone-icon { font-size: 36px; margin-bottom: var(--step-2); }
+    .dropzone-text { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+    .dropzone-subtext { font-size: 13px; color: var(--color-text-secondary); }
+    #folderInput { display: none; }
+
+    .folder-selected {
+      border: 1px solid var(--color-success);
+      background: var(--color-success-dim);
+      border-radius: 12px;
+      padding: var(--step-4);
+    }
+    .folder-selected .label { margin-bottom: var(--step-1); }
+    .folder-name {
+      font-weight: 600;
+      font-size: 17px;
+      color: var(--color-text-primary);
+      word-break: break-all;
+      margin-bottom: var(--step-3);
+    }
+    .btn-row { display: flex; gap: var(--step-2); flex-wrap: wrap; }
+
+    /* ---------- Progress ---------- */
+    .progress-block { padding-top: var(--step-2); }
+    .progress-bar {
+      width: 100%;
+      height: 10px;
+      background: var(--color-cream-dim);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: var(--step-2);
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--color-success);
+      width: 0%;
+      transition: width 300ms ease;
+    }
+    .progress-info { display: flex; justify-content: space-between; font-size: 13px; color: var(--color-text-secondary); flex-wrap: wrap; gap: 8px; }
+    .progress-status { margin-top: var(--step-2); font-size: 14px; color: var(--color-text-primary); }
+
+    /* ---------- Banners ---------- */
+    .banner { border-radius: 8px; padding: var(--step-3); margin-bottom: var(--step-3); font-size: 14px; line-height: 1.6; }
+    .banner h3 { font-size: 14px; margin-bottom: var(--step-1); }
+    .banner p, .banner .banner-item { margin: 4px 0; }
+    .banner-error { background: var(--color-error-dim); border: 1px solid var(--color-error); color: var(--color-error); }
+    .banner-error h3 { color: var(--color-error); }
+    .banner-warning { background: #FBF0DD; border: 1px solid #D9A441; color: #8A6013; }
+    .banner-warning h3 { color: #8A6013; }
+
+    /* ---------- Screen sections ---------- */
+    .screen-header { margin-bottom: var(--step-4); }
+    .screen-header h2 { font-size: 24px; margin-bottom: 6px; }
+    .screen-header p { color: var(--color-text-secondary); font-size: 15px; }
+
+    .section-block { padding: var(--step-4) 0; border-top: 1px solid var(--color-border); }
+    .section-block h3 { font-size: 15px; margin-bottom: var(--step-2); }
+
+    .checklist-row {
+      display: flex;
+      justify-content: space-between;
+      padding: var(--step-2) 0;
+      font-size: 15px;
+    }
+    .checklist-row:not(:last-child) { border-bottom: 1px solid var(--color-border); }
+    .checklist-row strong { font-weight: 600; color: var(--color-action); }
+
+    .folder-row {
+      display: flex;
+      justify-content: space-between;
+      padding: var(--step-2) 0;
+      font-size: 14px;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .folder-row:last-child { border-bottom: none; }
+    .folder-row .name { font-weight: 500; }
+    .folder-row .stats { color: var(--color-text-secondary); }
+
+    /* ---------- Two-column mapping / connect ---------- */
+    .connect-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--step-6);
+      margin: var(--step-4) 0;
+    }
+    @media (max-width: 768px) {
+      .connect-grid { grid-template-columns: 1fr; gap: var(--step-4); }
+    }
+    .connect-col h3 { font-size: 15px; margin-bottom: var(--step-3); padding-bottom: var(--step-2); border-bottom: 1px solid var(--color-border); }
+
+    .signin-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--color-text-secondary);
+      margin-top: var(--step-2);
+    }
+    .signin-status.signed-in { color: var(--color-success); }
+    .signin-status .dot { font-size: 10px; }
+
+    .drive-breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: var(--step-2);
+      font-size: 14px;
+      padding-bottom: var(--step-2);
+      margin-bottom: var(--step-2);
+      border-bottom: 1px solid var(--color-border);
+    }
+    .drive-breadcrumb .current { flex: 1; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .select-current-btn {
+      background: var(--color-success);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: background-color 150ms ease;
+    }
+    .select-current-btn:hover { background: #5c8a6d; }
+    .select-current-btn.selected {
+      background: var(--color-success-dim);
+      color: var(--color-success);
+      border: 1px solid var(--color-success);
+      padding: 7px 13px;
+    }
+
+    .drive-folder-list { display: flex; flex-direction: column; gap: 4px; max-height: 320px; overflow-y: auto; }
+    .drive-folder-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: border-color 150ms ease, background-color 150ms ease;
+    }
+    .drive-folder-item:hover { border-color: var(--color-action); background: #fff; }
+    .drive-folder-item.selected { border-color: var(--color-success); background: var(--color-success-dim); color: var(--color-success); font-weight: 600; }
+    .drive-folder-item .name { display: flex; align-items: center; gap: 8px; }
+
+    .selected-folder-box {
+      background: var(--color-success-dim);
+      border: 1px solid var(--color-success);
+      border-radius: 8px;
+      padding: var(--step-2) var(--step-3);
+      margin-bottom: var(--step-2);
+      font-size: 14px;
+    }
+    .selected-folder-box .label { margin-bottom: 2px; }
+    .selected-folder-box .path { font-weight: 600; color: var(--color-success); }
+
+    .oauth-setup-note {
+      background: var(--color-error-dim);
+      border: 1px solid var(--color-error);
+      color: var(--color-error);
+      padding: var(--step-3);
+      border-radius: 8px;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .oauth-setup-note ol { margin: var(--step-2) 0 0 20px; }
+
+    /* ---------- Upload log ---------- */
+    .upload-log {
+      margin-top: var(--step-3);
+      padding: var(--step-3);
+      background: #fff;
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+      max-height: 280px;
+      overflow-y: auto;
+      font-size: 13px;
+    }
+    .upload-log .entry { margin-bottom: 6px; color: var(--color-text-secondary); }
+    .upload-log .entry.success { color: var(--color-success); }
+    .upload-log .entry.error { color: var(--color-error); }
+    .upload-log time { font-weight: 600; color: var(--color-text-primary); margin-right: 6px; }
+
+    /* ---------- Done screen ---------- */
+    .done-block { text-align: center; padding: var(--step-6) 0; }
+    .done-icon { font-size: 40px; margin-bottom: var(--step-2); }
+    .done-block h2 { font-size: 26px; color: var(--color-success); margin-bottom: var(--step-2); }
+    .done-block p { color: var(--color-text-secondary); margin-bottom: var(--step-4); }
+    .done-actions { display: flex; gap: var(--step-2); justify-content: center; flex-wrap: wrap; }
+
+    .action-row { display: flex; justify-content: space-between; align-items: center; margin-top: var(--step-4); flex-wrap: wrap; gap: var(--step-2); }
+
+    /* Login screen */
+    .login-container { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--color-cream); }
+    .login-box { background: #fff; padding: var(--step-6); border-radius: 12px; box-shadow: 0 8px 32px var(--color-shadow); max-width: 400px; width: 100%; }
+    .login-box h1 { font-size: 26px; margin-bottom: var(--step-3); text-align: center; }
+    .login-box p { color: var(--color-text-secondary); text-align: center; font-size: 14px; margin-bottom: var(--step-4); }
+    .login-input {
+      width: 100%;
+      padding: var(--step-2) var(--step-3);
+      border: 1px solid var(--color-border);
+      border-radius: 8px;
+      font-size: 16px;
+      font-family: inherit;
+      margin-bottom: var(--step-3);
+      transition: border-color 150ms ease;
+    }
+    .login-input:focus { outline: none; border-color: var(--color-action); box-shadow: 0 0 0 3px rgba(232, 102, 27, 0.1); }
+    .login-error { background: var(--color-error-dim); border: 1px solid var(--color-error); color: var(--color-error); padding: var(--step-2) var(--step-3); border-radius: 8px; font-size: 13px; margin-bottom: var(--step-3); display: none; }
+    .login-error.show { display: block; }
+    .login-btn {
+      width: 100%;
+      padding: var(--step-2) var(--step-3);
+      background: var(--color-action);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 150ms ease;
+      min-height: 44px;
+    }
+    .login-btn:hover { background: var(--color-action-hover); }
+    .login-btn:active { transform: translateY(1px); }
+    .login-btn:disabled { background: var(--color-border); cursor: not-allowed; }
+
+    .page { display: none; }
+    .page.authenticated { display: block; }
+  </style>
+</head>
+<body>
+  <!-- ============ SCREEN: Login ============ -->
+  <div class="login-container" id="screen-login">
+    <div class="login-box">
+      <h1>Welcome</h1>
+      <p>Enter the password to access the notes migration tool.</p>
+      <div class="login-error" id="loginError"></div>
+      <input type="password" id="passwordInput" class="login-input" placeholder="Password" autocomplete="off" />
+      <button class="login-btn" id="loginBtn">Sign in</button>
+    </div>
+  </div>
+
+  <div class="page">
+    <div class="topbar">
+      <div class="mark"><span class="mark-dot"></span> Notes Migration</div>
+      <div class="step-label" id="stepLabel"></div>
+    </div>
+
+    <!-- ============ SCREEN: Landing + Upload ============ -->
+    <section id="screen-landing">
+      <div class="hero">
+        <div class="hero-visual" id="heroVisual">
+          <div class="hero-badge">📗 Evernote</div>
+          <div class="hero-path"><div class="hero-dot"></div></div>
+          <div class="hero-badge">📄 Google Docs</div>
+        </div>
+        <h1 class="headline">Move your notes home</h1>
+        <p class="subhead">We handle the transfer, right here in your browser. Your notes stay yours — nothing is stored on a server you don't control.</p>
+
+        <div class="trust-row">
+          <span class="trust-item">Client-side processing</span>
+          <span class="trust-item">Google sign-in, not passwords</span>
+          <span class="trust-item">Your data, your control</span>
+        </div>
+      </div>
+
+      <div class="how-it-works">
+        <h2>How it works</h2>
+        <div class="step-row"><div class="step-num">1</div><div class="step-body"><strong>Export from Evernote</strong><span>Export your notes as HTML from Evernote's desktop app.</span></div></div>
+        <div class="step-row"><div class="step-num">2</div><div class="step-body"><strong>Upload here</strong><span>Drop the exported folder below, or select it manually.</span></div></div>
+        <div class="step-row"><div class="step-num">3</div><div class="step-body"><strong>Authorize Google</strong><span>Sign in and choose where your notes should land in Drive.</span></div></div>
+        <div class="step-row"><div class="step-num">4</div><div class="step-body"><strong>Done</strong><span>Your notes appear in Google Docs, fully formatted.</span></div></div>
+      </div>
+
+      <div class="upload-block">
+        <div id="validationErrorsLanding"></div>
+
+        <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Upload Evernote export folder">
+          <div class="dropzone-icon">📁</div>
+          <div class="dropzone-text">Drop your Evernote export folder here</div>
+          <div class="dropzone-subtext">or click to select a folder (desktop browsers only)</div>
+        </div>
+
+        <input type="file" id="folderInput" webkitdirectory directory mozdirectory />
+
+        <div class="folder-selected" id="folderSelected" hidden>
+          <div class="label">FOLDER SELECTED</div>
+          <div class="folder-name" id="folderPath"></div>
+          <div class="btn-row">
+            <button class="btn-action" id="beginBtn">Upload Evernote Export</button>
+            <button class="btn-quiet" id="changeBtn">Choose a different folder</button>
+          </div>
+        </div>
+
+        <div class="progress-block" id="parseProgress" hidden>
+          <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+          <div class="progress-info">
+            <span id="progressPercent">0% complete</span>
+            <span id="timeRemaining">Est. time remaining: --</span>
+          </div>
+          <div class="progress-status" id="progressStatus">Parsing notes...</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SCREEN: Review ============ -->
+    <section id="screen-review" hidden>
+      <div id="validationErrorsReview"></div>
+      <div class="screen-header">
+        <h2>Your notes are ready</h2>
+        <p>Here's what we found before we send anything to Google Docs.</p>
+      </div>
+
+      <div class="section-block" style="border-top:none; padding-top:0;">
+        <div class="checklist-row"><span>Notes ready for migration</span><strong id="statNotes">0</strong></div>
+        <div class="checklist-row"><span>Images &amp; attachments</span><strong id="statResources">0</strong></div>
+        <div class="checklist-row"><span>Folders to create</span><strong id="statFolders">0</strong></div>
+        <div class="checklist-row" id="statIssuesRow" hidden><span>Files with issues</span><strong id="statIssues">0</strong></div>
+      </div>
+
+      <div class="section-block">
+        <h3>Folder breakdown</h3>
+        <div id="folderBreakdown"></div>
+      </div>
+
+      <div class="section-block" id="issuesBlock" hidden>
+        <h3>Files with issues</h3>
+        <div id="issuesList"></div>
+      </div>
+
+      <div class="action-row">
+        <button class="btn-quiet" id="backToLanding">← Start over</button>
+        <button class="btn-action" id="proceedToConnect">Continue to Google Drive →</button>
+      </div>
+    </section>
+
+    <!-- ============ SCREEN: Connect + Map ============ -->
+    <section id="screen-connect" hidden>
+      <div id="validationErrorsConnect"></div>
+      <div class="screen-header">
+        <h2>Connect your Google Drive</h2>
+        <p>Choose where your notes should live, then we'll take it from there.</p>
+      </div>
+
+      <div class="connect-grid">
+        <div class="connect-col">
+          <h3>From Evernote</h3>
+          <div id="sourceFolderTree"></div>
+        </div>
+        <div class="connect-col">
+          <h3>Destination in Google Drive</h3>
+          <div id="googleSignInContainer"></div>
+          <div class="signin-status" id="signinStatus"><span class="dot">●</span><span id="signinStatusText">Not connected yet</span></div>
+
+          <div id="driveBrowser" hidden style="margin-top: 16px;">
+            <div id="selectedFolderBox"></div>
+            <div class="drive-breadcrumb">
+              <button class="btn-link" id="driveBackBtn" hidden>← Back</button>
+              <span class="current" id="driveCurrentFolder">My Drive</span>
+              <button class="select-current-btn" id="driveSelectCurrentBtn">✓ Select this folder</button>
+            </div>
+            <div class="drive-folder-list" id="driveFolderList"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-block">
+        <h3>Migration summary</h3>
+        <div class="checklist-row"><span>Total folders to create</span><strong id="summaryFolders">0</strong></div>
+        <div class="checklist-row"><span>Total notes to upload</span><strong id="summaryNotes">0</strong></div>
+        <div class="checklist-row"><span>Total resources to embed</span><strong id="summaryResources">0</strong></div>
+      </div>
+
+      <div class="action-row">
+        <button class="btn-quiet" id="backToReview">← Back</button>
+        <button class="btn-action" id="proceedToUpload">Export to Google Docs →</button>
+      </div>
+    </section>
+
+    <!-- ============ SCREEN: Uploading ============ -->
+    <section id="screen-uploading" hidden>
+      <div id="validationErrorsUpload"></div>
+      <div class="screen-header">
+        <h2>Sending your notes to Google Docs</h2>
+        <p id="uploadDestLabel">Converting notes and uploading to Google Drive.</p>
+      </div>
+
+      <div class="progress-block">
+        <div class="progress-bar"><div class="progress-fill" id="uploadFill"></div></div>
+        <div class="progress-info">
+          <span id="uploadStatusLeft">Preparing...</span>
+          <span id="uploadStatusRight"></span>
+        </div>
+      </div>
+
+      <div class="upload-log" id="uploadLog"></div>
+    </section>
+
+    <!-- ============ SCREEN: Done ============ -->
+    <section id="screen-done" hidden>
+      <div class="done-block">
+        <div class="done-icon" id="doneIcon">✓</div>
+        <h2 id="doneHeadline">Your notes are in Google Docs</h2>
+        <p id="doneSubtext">All set — everything uploaded successfully.</p>
+        <div class="done-actions">
+          <a id="doneDriveLink" class="btn-action" href="https://drive.google.com" target="_blank" rel="noopener" style="text-decoration:none; display:inline-block;">Open in Google Drive</a>
+          <button class="btn-quiet" id="startOverBtn">Start over</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script type="module">
+    // ============================================================
+    // State
+    // ============================================================
+    let selectedFiles = [];
+    let parseStartTime = 0;
+    let lastParseResult = null;
+    let googleAccessToken = null;
+    let googleTokenClient = null;
+    let selectedDriveFolderId = null;
+    let selectedDriveFolderPath = 'My Drive';
+    let currentBrowseFolderId = 'root';
+    let folderBreadcrumbs = [];
+
+    const screens = ['screen-login', 'screen-landing', 'screen-review', 'screen-connect', 'screen-uploading', 'screen-done'];
+    let isAuthenticated = false;
+    const stepLabels = {
+      'screen-landing': '',
+      'screen-review': 'Step 2 of 4 — Review',
+      'screen-connect': 'Step 3 of 4 — Connect Drive',
+      'screen-uploading': 'Step 4 of 4 — Uploading',
+      'screen-done': ''
+    };
+
+    function showScreen(id) {
+      screens.forEach(s => document.getElementById(s).hidden = (s !== id));
+      document.getElementById('stepLabel').textContent = stepLabels[id] || '';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ============================================================
+    // Password authentication
+    // ============================================================
+    const passwordInput = document.getElementById('passwordInput');
+    const loginBtn = document.getElementById('loginBtn');
+    const loginError = document.getElementById('loginError');
+    const page = document.querySelector('.page');
+    const CORRECT_PASSWORD = 'byeevernote';
+
+    function handleLogin() {
+      loginError.classList.remove('show');
+      loginError.textContent = '';
+
+      if (passwordInput.value === CORRECT_PASSWORD) {
+        isAuthenticated = true;
+        page.classList.add('authenticated');
+        showScreen('screen-landing');
+      } else {
+        loginError.textContent = 'Incorrect password. Please try again.';
+        loginError.classList.add('show');
+        passwordInput.value = '';
+        passwordInput.focus();
+      }
+    }
+
+    loginBtn.addEventListener('click', handleLogin);
+    passwordInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleLogin();
+      }
+    });
+
+    // Show login screen initially
+    showScreen('screen-login');
+
+    // Play the hero flow animation once, respecting reduced motion
+    requestAnimationFrame(() => {
+      const heroVisual = document.getElementById('heroVisual');
+      if (heroVisual) heroVisual.classList.add('play');
+    });
+
+    // ============================================================
+    // Error / warning banners (plain-language, per screen)
+    // ============================================================
+    function bannerHtml(kind, message, details) {
+      const cls = kind === 'error' ? 'banner-error' : 'banner-warning';
+      const title = kind === 'error' ? "That didn't work" : 'Heads up';
+      return `
+        <div class="banner ${cls}">
+          <h3>${title}</h3>
+          <p>${message}</p>
+          ${details && details.length ? details.map(d => `<div class="banner-item">• ${escapeHtml(d)}</div>`).join('') : ''}
+        </div>
+      `;
+    }
+
+    function showError(containerId, message, details = []) {
+      document.getElementById(containerId).innerHTML = bannerHtml('error', message, details);
+      document.getElementById(containerId).scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return false;
+    }
+
+    function showWarning(containerId, message, details = []) {
+      document.getElementById(containerId).innerHTML = bannerHtml('warning', message, details);
+    }
+
+    function clearBanner(containerId) {
+      document.getElementById(containerId).innerHTML = '';
+    }
+
+    // ============================================================
+    // Validation functions for each phase
+    // ============================================================
+    function validatePhase1() {
+      clearBanner('validationErrorsLanding');
+      if (selectedFiles.length === 0) {
+        return showError('validationErrorsLanding', "We need a folder to work with.", ['Select or drop the folder you exported from Evernote.']);
+      }
+      const htmlFiles = selectedFiles.filter(f => f.name.endsWith('.html') && f.name !== 'Evernote_index.html');
+      if (htmlFiles.length === 0) {
+        return showError('validationErrorsLanding', "Couldn't find any notes in that folder.", ["Make sure you exported from Evernote as HTML, then choose that folder again."]);
+      }
+      return true;
+    }
+
+    function validatePhase2(result) {
+      clearBanner('validationErrorsReview');
+      if (!result || !result.summary) {
+        return showError('validationErrorsReview', 'Something about that export was unreadable.', ['Try exporting from Evernote again and upload the new file.']);
+      }
+      if (result.summary.totalNotes === 0) {
+        return showError('validationErrorsReview', 'No valid notes turned up in this export.', ['Double check you selected the right folder.']);
+      }
+      if (result.failedFiles && result.failedFiles.length > 0) {
+        showWarning('validationErrorsReview', `${result.failedFiles.length} file${result.failedFiles.length !== 1 ? 's' : ''} had trouble parsing — the rest are unaffected.`,
+          result.failedFiles.slice(0, 5).map(f => `${f.filename}: ${f.reason}`));
+      }
+      return true;
+    }
+
+    function validatePhase3(destFolderId, isSigned) {
+      clearBanner('validationErrorsConnect');
+      if (!isSigned) {
+        return showError('validationErrorsConnect', "You'll need to sign in with Google first.", ['Use the sign-in button above to connect your account.']);
+      }
+      if (!destFolderId || destFolderId === 'root_unset') {
+        return showError('validationErrorsConnect', 'Pick a destination folder before continuing.', ["Browse into a folder and select it, or select My Drive itself."]);
+      }
+      return true;
+    }
+
+    function validatePhase4Upload(totalNotes) {
+      clearBanner('validationErrorsUpload');
+      if (!totalNotes || totalNotes === 0) {
+        return showError('validationErrorsUpload', 'There are no notes to upload.', []);
+      }
+      return true;
+    }
+
+    // ============================================================
+    // Dropzone / file selection
+    // ============================================================
+    const dropzone = document.getElementById('dropzone');
+    const folderInput = document.getElementById('folderInput');
+    const folderSelected = document.getElementById('folderSelected');
+    const folderPath = document.getElementById('folderPath');
+    const beginBtn = document.getElementById('beginBtn');
+    const changeBtn = document.getElementById('changeBtn');
+    const parseProgress = document.getElementById('parseProgress');
+    const progressFill = document.getElementById('progressFill');
+    const progressPercent = document.getElementById('progressPercent');
+    const timeRemaining = document.getElementById('timeRemaining');
+    const progressStatus = document.getElementById('progressStatus');
+
+    dropzone.addEventListener('click', () => folderInput.click());
+    dropzone.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); folderInput.click(); }
+    });
+
+    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('active'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('active'));
+
+    dropzone.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('active');
+      try {
+        const items = e.dataTransfer.items;
+        const files = [];
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i].webkitGetAsEntry();
+          if (item) await traverseFileTree(item, '', files);
+        }
+        if (files.length === 0) {
+          showError('validationErrorsLanding', 'No files came through.', ['Drop a folder containing Evernote HTML files, not an individual file.']);
+          return;
+        }
+        showFolderSelected(files);
+      } catch (error) {
+        showError('validationErrorsLanding', error.message, []);
+      }
+    });
+
+    folderInput.addEventListener('change', (e) => {
+      selectedFiles = Array.from(e.target.files);
+      if (selectedFiles.length === 0) return;
+      showFolderSelected(selectedFiles);
+    });
+
+    function showFolderSelected(files) {
+      selectedFiles = files;
+      clearBanner('validationErrorsLanding');
+      dropzone.hidden = true;
+      folderSelected.hidden = false;
+      const firstPath = selectedFiles[0].webkitRelativePath || selectedFiles[0].name;
+      const folderName = firstPath.split('/')[0] || 'Selected folder';
+      folderPath.textContent = folderName;
+    }
+
+    changeBtn.addEventListener('click', () => {
+      selectedFiles = [];
+      dropzone.hidden = false;
+      folderSelected.hidden = true;
+      folderInput.value = '';
+      clearBanner('validationErrorsLanding');
+    });
+
+    beginBtn.addEventListener('click', async () => {
+      if (!validatePhase1()) return;
+
+      folderSelected.hidden = true;
+      parseProgress.hidden = false;
+      parseStartTime = Date.now();
+
+      try {
+        const result = await parseEvernoteExportWithProgress(selectedFiles);
+        parseProgress.hidden = true;
+        displayReview(result);
+      } catch (error) {
+        parseProgress.hidden = true;
+        folderSelected.hidden = false;
+        showError('validationErrorsLanding', 'We ran into a problem parsing that export.', [error.message]);
+        console.error('Parse error:', error);
+      }
+    });
+
+    // ============================================================
+    // Parsing (Phase 1 logic — unchanged from original implementation)
+    // ============================================================
+    async function parseEvernoteExportWithProgress(files) {
+      const fileArray = Array.from(files);
+      const htmlFiles = fileArray.filter(f => f.name.endsWith('.html'));
+      const htmlCount = htmlFiles.length;
+
+      const notes = [];
+      const failedFiles = [];
+      let processedFiles = 0;
+
+      for (const htmlFile of htmlFiles) {
+        if (htmlFile.name === 'Evernote_index.html') {
+          processedFiles++;
+          continue;
+        }
+
+        try {
+          const htmlContent = await readFileAsText(htmlFile);
+          const doc = new DOMParser().parseFromString(htmlContent, 'text/html');
+
+          let title = '';
+          const metaTitle = doc.querySelector('meta[itemprop="title"]');
+          if (metaTitle) title = metaTitle.getAttribute('content');
+          if (!title) {
+            const noteTitleDiv = doc.querySelector('.noteTitle');
+            if (noteTitleDiv) title = (noteTitleDiv.textContent || '').trim();
+          }
+          if (!title) {
+            const titleElement = doc.querySelector('title');
+            if (titleElement) title = titleElement.textContent;
+          }
+          if (!title) title = htmlFile.name.replace('.html', '');
+
+          const folderPathVal = extractFolderPath(htmlFile.webkitRelativePath || htmlFile.name);
+
+          const bodyElement = doc.body;
+          if (!bodyElement || !bodyElement.innerHTML.trim()) {
+            failedFiles.push({ filename: htmlFile.name, reason: 'No <body> element found or body is empty' });
+            processedFiles++;
+            updateProgress(processedFiles, htmlCount, htmlFile.name);
+            continue;
+          }
+
+          const imgElements = bodyElement.querySelectorAll('img');
+          let resourceCount = 0;
+          for (const img of imgElements) {
+            const src = img.getAttribute('src');
+            if (src) {
+              const attachmentFile = findAttachmentFile(src, fileArray, htmlFile.webkitRelativePath);
+              if (attachmentFile) {
+                try { await fileToDataUri(attachmentFile); resourceCount++; } catch (e) { /* continue */ }
+              }
+            }
+          }
+
+          const blocks = parseNoteBodyToBlocks(doc);
+
+          notes.push({ title, filename: htmlFile.name, blocks, folderPath: folderPathVal, resourceCount, parseWarnings: [] });
+        } catch (error) {
+          failedFiles.push({ filename: htmlFile.name, reason: error.message });
+        }
+
+        processedFiles++;
+        updateProgress(processedFiles, htmlCount, htmlFile.name);
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
+
+      return {
+        folderStructure: buildFolderTree(fileArray),
+        notes,
+        failedFiles,
+        summary: {
+          totalNotes: notes.length,
+          totalResources: notes.reduce((sum, n) => sum + n.resourceCount, 0),
+          failedFiles: failedFiles.length
+        }
+      };
+    }
+
+    function updateProgress(processed, total, currentFile) {
+      const percent = Math.round((processed / total) * 100);
+      const elapsed = Date.now() - parseStartTime;
+      const rate = elapsed / processed;
+      const remaining = (total - processed) * rate;
+      const remainingSeconds = Math.ceil(remaining / 1000);
+
+      progressFill.style.width = percent + '%';
+      progressPercent.textContent = `${percent}% complete (${processed}/${total} notes)`;
+
+      if (remainingSeconds > 0) {
+        timeRemaining.textContent = remainingSeconds < 60
+          ? `Est. time remaining: ${remainingSeconds}s`
+          : `Est. time remaining: ${Math.ceil(remainingSeconds / 60)}m`;
+      }
+      progressStatus.textContent = `Parsing: ${currentFile}`;
+    }
+
+    function readFileAsText(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsText(file);
+      });
+    }
+
+    function fileToDataUri(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function extractFolderPath(relativePath) {
+      if (!relativePath) return '';
+      const lastSlash = relativePath.lastIndexOf('/');
+      return lastSlash > 0 ? relativePath.substring(0, lastSlash) : '';
+    }
+
+    function findAttachmentFile(src, files, htmlFilePath) {
+      const htmlFolder = extractFolderPath(htmlFilePath || '');
+
+      for (const file of files) {
+        const filePath = file.webkitRelativePath || file.name;
+        if (filePath.endsWith(src) || filePath.endsWith(src.split('/').pop())) return file;
+      }
+      if (htmlFolder && src.startsWith('../')) {
+        const resolvedPath = htmlFolder.split('/').slice(0, -1).join('/') + '/' + src.substring(3);
+        for (const file of files) {
+          const filePath = file.webkitRelativePath || file.name;
+          if (filePath === resolvedPath || filePath.endsWith(src.split('/').pop())) return file;
+        }
+      }
+      if (htmlFolder) {
+        const folderRelativePath = htmlFolder + '/' + src;
+        for (const file of files) {
+          const filePath = file.webkitRelativePath || file.name;
+          if (filePath === folderRelativePath) return file;
+        }
+      }
+      const filename = src.split('/').pop();
+      for (const file of files) {
+        if (file.name === filename) return file;
+      }
+      return null;
+    }
+
+    // Parses an Evernote note document into an ordered array of structural
+    // blocks (headings, paragraphs, bullet/numbered lists with nesting,
+    // blockquotes, inline bold/italic/underline/strikethrough runs, line
+    // breaks, and inline images) so nothing is lost before markup cleanup.
+    function parseNoteBodyToBlocks(doc) {
+      const contentRoot = doc.querySelector('en-note') || doc.body;
+      const blocks = [];
+      let listIdCounter = 0;
+
+      function isBlankElement(el) {
+        const inner = el.innerHTML.trim();
+        return inner === '' || /^(<br\s*\/?>\s*)+$/i.test(inner);
+      }
+
+      function extractRuns(el) {
+        const runs = [];
+        function walk(node, style) {
+          if (node.nodeType === Node.TEXT_NODE) {
+            const text = node.textContent;
+            const isFormattingWhitespace = /^[ \t\r\n]*$/.test(text) && /\n/.test(text);
+            if (text && !isFormattingWhitespace) runs.push({ text, ...style });
+            return;
+          }
+          if (node.nodeType !== Node.ELEMENT_NODE) return;
+          const tag = node.tagName.toUpperCase();
+          if (tag === 'BR') { runs.push({ isBreak: true }); return; }
+          if (tag === 'IMG') return;
+          const newStyle = { ...style };
+          if (tag === 'B' || tag === 'STRONG') newStyle.bold = true;
+          if (tag === 'I' || tag === 'EM') newStyle.italic = true;
+          if (tag === 'U') newStyle.underline = true;
+          if (tag === 'S' || tag === 'DEL' || tag === 'STRIKE') newStyle.strikethrough = true;
+          for (const child of node.childNodes) walk(child, newStyle);
+        }
+        walk(el, {});
+        return runs;
+      }
+
+      function pushBlank() {
+        if (blocks.length === 0 || blocks[blocks.length - 1].type !== 'blank') blocks.push({ type: 'blank' });
+      }
+
+      function pushParagraphIfNonBlank(el) {
+        if (isBlankElement(el)) { pushBlank(); return; }
+        const runs = extractRuns(el);
+        if (runs.length === 0) { pushBlank(); return; }
+        blocks.push({ type: 'paragraph', runs });
+      }
+
+      function nodesToRuns(nodes) {
+        const wrapper = document.createElement('div');
+        nodes.forEach(n => wrapper.appendChild(n.cloneNode(true)));
+        return extractRuns(wrapper);
+      }
+
+      function processList(listEl, ordered, level) {
+        listIdCounter++;
+        const myListId = `list-${listIdCounter}`;
+        const cappedLevel = Math.min(level, 8);
+        Array.from(listEl.children).forEach(li => {
+          if (li.tagName !== 'LI') return;
+
+          const directNodes = [];
+          const nestedLists = [];
+          const afterNodes = [];
+          let seenNested = false;
+          for (const child of li.childNodes) {
+            if (child.nodeType === Node.ELEMENT_NODE && (child.tagName === 'UL' || child.tagName === 'OL')) {
+              seenNested = true;
+              nestedLists.push(child);
+            } else if (!seenNested) {
+              directNodes.push(child);
+            } else {
+              afterNodes.push(child);
+            }
+          }
+
+          const runs = nodesToRuns(directNodes);
+          blocks.push({ type: ordered ? 'numberedItem' : 'bulletItem', runs, level: cappedLevel, listId: myListId });
+
+          nestedLists.forEach(nl => processList(nl, nl.tagName === 'OL', level + 1));
+
+          const afterRuns = nodesToRuns(afterNodes);
+          if (afterRuns.length > 0) blocks.push({ type: 'paragraph', runs: afterRuns });
+        });
+      }
+
+      function processNode(node) {
+        if (node.nodeType === Node.TEXT_NODE) {
+          const text = node.textContent.trim();
+          if (text) blocks.push({ type: 'paragraph', runs: [{ text }] });
+          return;
+        }
+        if (node.nodeType !== Node.ELEMENT_NODE) return;
+        const tag = node.tagName.toUpperCase();
+
+        if (tag === 'ICONS' || tag === 'STYLE' || tag === 'SCRIPT' || tag === 'NOTE-ATTRIBUTES') return;
+        if (tag === 'DIV' && node.classList.contains('noteTitle')) return;
+
+        if (/^H[1-6]$/.test(tag)) {
+          const level = parseInt(tag[1], 10);
+          const runs = extractRuns(node);
+          if (runs.length > 0) blocks.push({ type: 'heading', level, runs });
+          return;
+        }
+        if (tag === 'UL' || tag === 'OL') { processList(node, tag === 'OL', 0); return; }
+        if (tag === 'BLOCKQUOTE') {
+          const runs = extractRuns(node);
+          if (runs.length > 0) blocks.push({ type: 'blockquote', runs });
+          return;
+        }
+        if (tag === 'IMG') {
+          const src = node.getAttribute('src');
+          if (src) blocks.push({ type: 'image', src });
+          return;
+        }
+        if (tag === 'HR') { pushBlank(); return; }
+        if (tag === 'P' || tag === 'DIV') {
+          const hasBlockChildren = Array.from(node.children).some(c =>
+            ['DIV', 'UL', 'OL', 'BLOCKQUOTE', 'P'].includes(c.tagName) || /^H[1-6]$/.test(c.tagName)
+          );
+          if (hasBlockChildren) {
+            for (const child of node.childNodes) processNode(child);
+            return;
+          }
+          pushParagraphIfNonBlank(node);
+          return;
+        }
+        for (const child of node.childNodes) processNode(child);
+      }
+
+      for (const child of contentRoot.childNodes) processNode(child);
+
+      while (blocks.length && blocks[0].type === 'blank') blocks.shift();
+      while (blocks.length && blocks[blocks.length - 1].type === 'blank') blocks.pop();
+
+      return blocks;
+    }
+
+    function buildFolderTree(files) {
+      const root = { name: 'Evernote Export', type: 'folder', children: [] };
+      const pathMap = new Map();
+      pathMap.set('', root);
+
+      const folderPaths = new Set();
+      files.forEach(file => {
+        const path = extractFolderPath(file.webkitRelativePath || file.name);
+        if (path) folderPaths.add(path);
+      });
+
+      const sortedPaths = Array.from(folderPaths).sort();
+      sortedPaths.forEach(path => {
+        const parts = path.split('/').filter(Boolean);
+        let currentPath = '';
+        parts.forEach((part) => {
+          const prevPath = currentPath;
+          currentPath = currentPath ? `${currentPath}/${part}` : part;
+          if (!pathMap.has(currentPath)) {
+            const parent = pathMap.get(prevPath);
+            const folderNode = { name: part, type: 'folder', path: currentPath, children: [] };
+            parent.children.push(folderNode);
+            pathMap.set(currentPath, folderNode);
+          }
+        });
+      });
+
+      files.forEach(file => {
+        if (!file.name.endsWith('.html') || file.name === 'Evernote_index.html') return;
+        const path = extractFolderPath(file.webkitRelativePath || file.name);
+        const folderNode = pathMap.get(path || '');
+        if (folderNode) folderNode.fileCount = (folderNode.fileCount || 0) + 1;
+      });
+
+      return root;
+    }
+
+    function traverseFileTree(item, path, files) {
+      return new Promise((resolve) => {
+        if (item.isFile) {
+          item.file((file) => {
+            file.webkitRelativePath = path ? `${path}/${file.name}` : file.name;
+            files.push(file);
+            resolve();
+          });
+        } else if (item.isDirectory) {
+          const reader = item.createReader();
+          reader.readEntries((entries) => {
+            let completed = 0;
+            if (entries.length === 0) { resolve(); return; }
+            entries.forEach((entry) => {
+              traverseFileTree(entry, path ? `${path}/${item.name}` : item.name, files).then(() => {
+                completed++;
+                if (completed === entries.length) resolve();
+              });
+            });
+          });
+        }
+      });
+    }
+
+    function escapeHtml(text) {
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+      return String(text).replace(/[&<>"']/g, m => map[m]);
+    }
+
+    // ============================================================
+    // Review screen (Phase 2)
+    // ============================================================
+    function displayReview(result) {
+      lastParseResult = result;
+      if (!validatePhase2(result)) {
+        showScreen('screen-review');
+        return;
+      }
+
+      const folderStats = {};
+      result.notes.forEach(note => {
+        const path = note.folderPath || '(root)';
+        if (!folderStats[path]) folderStats[path] = { noteCount: 0, resourceCount: 0 };
+        folderStats[path].noteCount++;
+        folderStats[path].resourceCount += note.resourceCount;
+      });
+
+      document.getElementById('statNotes').textContent = result.summary.totalNotes;
+      document.getElementById('statResources').textContent = result.summary.totalResources;
+      document.getElementById('statFolders').textContent = Object.keys(folderStats).length;
+
+      const issuesRow = document.getElementById('statIssuesRow');
+      if (result.summary.failedFiles > 0) {
+        issuesRow.hidden = false;
+        document.getElementById('statIssues').textContent = result.summary.failedFiles;
+      } else {
+        issuesRow.hidden = true;
+      }
+
+      document.getElementById('folderBreakdown').innerHTML = Object.entries(folderStats).sort().map(([folder, stats]) => `
+        <div class="folder-row">
+          <span class="name">${escapeHtml(folder)}</span>
+          <span class="stats">${stats.noteCount} note${stats.noteCount !== 1 ? 's' : ''} · ${stats.resourceCount} resource${stats.resourceCount !== 1 ? 's' : ''}</span>
+        </div>
+      `).join('');
+
+      const issuesBlock = document.getElementById('issuesBlock');
+      if (result.failedFiles.length > 0) {
+        issuesBlock.hidden = false;
+        document.getElementById('issuesList').innerHTML = result.failedFiles.map(f => `
+          <div class="banner banner-warning" style="margin-bottom:8px;">
+            <strong>${escapeHtml(f.filename)}</strong><br>${escapeHtml(f.reason)}
+          </div>
+        `).join('');
+      } else {
+        issuesBlock.hidden = true;
+      }
+
+      showScreen('screen-review');
+    }
+
+    document.getElementById('backToLanding').addEventListener('click', () => {
+      selectedFiles = [];
+      dropzone.hidden = false;
+      folderSelected.hidden = true;
+      folderInput.value = '';
+      clearBanner('validationErrorsLanding');
+      showScreen('screen-landing');
+    });
+
+    document.getElementById('proceedToConnect').addEventListener('click', () => {
+      if (!validatePhase2(lastParseResult)) return;
+      displayConnect(lastParseResult);
+    });
+
+    // ============================================================
+    // Connect screen (Phase 3) — Google sign-in + Drive folder browse
+    // ============================================================
+    function displayConnect(result) {
+      const folderStats = {};
+      result.notes.forEach(note => {
+        const path = note.folderPath || '(root)';
+        if (!folderStats[path]) folderStats[path] = { noteCount: 0, resourceCount: 0 };
+        folderStats[path].noteCount++;
+        folderStats[path].resourceCount += note.resourceCount;
+      });
+
+      const folders = Object.keys(folderStats).sort();
+      document.getElementById('sourceFolderTree').innerHTML = folders.map(path => {
+        const name = path === '(root)' ? 'Root folder' : path.split('/').pop();
+        const stats = folderStats[path];
+        return `<div class="folder-row"><span class="name">${escapeHtml(name)}</span><span class="stats">${stats.noteCount} note${stats.noteCount !== 1 ? 's' : ''}</span></div>`;
+      }).join('');
+
+      document.getElementById('summaryFolders').textContent = folders.length;
+      document.getElementById('summaryNotes').textContent = result.summary.totalNotes;
+      document.getElementById('summaryResources').textContent = result.summary.totalResources;
+
+      clearBanner('validationErrorsConnect');
+      showScreen('screen-connect');
+      initializeGoogleSignIn();
+    }
+
+    document.getElementById('backToReview').addEventListener('click', () => {
+      displayReview(lastParseResult);
+    });
+
+    document.getElementById('proceedToUpload').addEventListener('click', () => {
+      if (!validatePhase3(selectedDriveFolderId, !!googleAccessToken)) return;
+      displayUploading(lastParseResult, selectedDriveFolderId, selectedDriveFolderPath);
+    });
+
+    // Initialize Google OAuth with Drive API access.
+    // NOTE: This client ID is the app's own OAuth credential — any user can
+    // sign in with their own Google account (external consent screen type).
+    function initializeGoogleSignIn() {
+      const signInContainer = document.getElementById('googleSignInContainer');
+      if (!signInContainer) return;
+
+      if (typeof google === 'undefined' || !google.accounts) {
+        signInContainer.innerHTML = `
+          <div class="oauth-setup-note">
+            <strong>Google sign-in isn't available right now.</strong>
+            <ol>
+              <li>Go to <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a></li>
+              <li>Create or select a project</li>
+              <li>Enable the Google Drive API</li>
+              <li>Create OAuth 2.0 Web credentials</li>
+              <li>Add the Client ID to this app</li>
+            </ol>
+          </div>
+        `;
+        return;
+      }
+
+      if (googleTokenClient) {
+        // Already initialized in a previous visit to this screen.
+        renderSignInButton(signInContainer);
+        return;
+      }
+
+      try {
+        googleTokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: '346028058051-elmqlvgkhjo94jt4a0hsb7res3dlcnm0.apps.googleusercontent.com',
+          scope: 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/userinfo.email',
+          callback: handleTokenResponse
+        });
+        renderSignInButton(signInContainer);
+      } catch (error) {
+        signInContainer.innerHTML = `<div class="oauth-setup-note"><strong>Couldn't set up Google sign-in.</strong><br>${escapeHtml(error.message || 'Please check the OAuth configuration.')}</div>`;
+      }
+    }
+
+    function renderSignInButton(container) {
+      if (googleAccessToken) return; // already signed in
+      container.innerHTML = '';
+      const btn = document.createElement('button');
+      btn.className = 'btn-action';
+      btn.textContent = 'Connecting to Google...';
+      btn.textContent = '🔐 Sign in with Google';
+      btn.onclick = (e) => {
+        e.preventDefault();
+        btn.disabled = true;
+        btn.textContent = 'Connecting to Google...';
+        googleTokenClient.requestAccessToken({ prompt: 'consent' });
+      };
+      container.appendChild(btn);
+    }
+
+    async function handleTokenResponse(response) {
+      const signInContainer = document.getElementById('googleSignInContainer');
+      if (response.error !== undefined) {
+        console.error('OAuth error:', response.error);
+        showError('validationErrorsConnect', "Sign-in didn't go through.", [response.error]);
+        renderSignInButton(signInContainer);
+        return;
+      }
+
+      googleAccessToken = response.access_token;
+
+      try {
+        const userResponse = await fetch('https://www.googleapis.com/oauth2/v1/userinfo?access_token=' + googleAccessToken);
+        if (!userResponse.ok) throw new Error('Failed to fetch user info');
+        const userInfo = await userResponse.json();
+
+        signInContainer.innerHTML = `<div class="signin-status signed-in" style="margin:0;"><span class="dot">●</span> Connected as ${escapeHtml(userInfo.email)}</div>`;
+
+        const statusEl = document.getElementById('signinStatus');
+        statusEl.classList.add('signed-in');
+        document.getElementById('signinStatusText').textContent = `Signed in as ${userInfo.email}`;
+
+        document.getElementById('driveBrowser').hidden = false;
+        selectedDriveFolderId = 'root_unset';
+        loadDriveFolders('root', 'My Drive');
+      } catch (error) {
+        console.error('Error during sign-in:', error);
+        showError('validationErrorsConnect', 'Signed in, but we could not load your Drive folders.', ['Try refreshing the page and signing in again.']);
+      }
+    }
+
+    let currentBrowseFolderName = 'My Drive';
+
+    async function loadDriveFolders(folderId, folderName) {
+      const folderList = document.getElementById('driveFolderList');
+      folderList.innerHTML = `<div style="text-align:center;color:var(--color-text-secondary);padding:20px;">Loading folders...</div>`;
+
+      try {
+        if (folderId === 'root') folderBreadcrumbs = [];
+        currentBrowseFolderId = folderId;
+        currentBrowseFolderName = folderName;
+        updateBreadcrumb(folderName);
+
+        const query = `(mimeType='application/vnd.google-apps.folder') and ('${folderId}' in parents) and (trashed=false)`;
+        const params = new URLSearchParams({ q: query, spaces: 'drive', fields: 'files(id,name,mimeType)', pageSize: '100', orderBy: 'name' });
+        const url = `https://www.googleapis.com/drive/v3/files?${params.toString()}`;
+
+        const response = await fetch(url, { headers: { 'Authorization': `Bearer ${googleAccessToken}`, 'Accept': 'application/json' } });
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
+          throw new Error(`Drive ${response.status}: ${errorData.error?.message || 'Failed to list folders'}`);
+        }
+
+        const data = await response.json();
+        const folders = (data.files || []).sort((a, b) => a.name.localeCompare(b.name));
+
+        let html = '';
+        if (folders.length > 0) {
+          html += folders.map(folder => `
+            <div class="drive-folder-item" onclick="window.__navigateDriveFolder('${escapeHtml(folder.id)}', '${escapeHtml(folder.name)}')">
+              <span class="name">📂 ${escapeHtml(folder.name)}</span>
+              <span>›</span>
+            </div>
+          `).join('');
+        } else if (folderId === 'root') {
+          html += `<div style="color:var(--color-text-secondary);padding:12px 0;font-size:13px;">No folders in My Drive yet — you can still select My Drive itself using the button above, or create a folder in Drive first.</div>`;
+        }
+
+        folderList.innerHTML = html;
+      } catch (error) {
+        console.error('Error loading Drive folders:', error);
+        folderList.innerHTML = `<div class="banner banner-error"><h3>Couldn't load folders</h3><p>${escapeHtml(error.message)}</p></div>`;
+      }
+    }
+
+    window.__navigateDriveFolder = function(folderId, folderName) {
+      folderBreadcrumbs.push({ id: folderId, name: folderName });
+      loadDriveFolders(folderId, folderName);
+    };
+
+    function updateBreadcrumb(folderName) {
+      const backBtn = document.getElementById('driveBackBtn');
+      const currentDisplay = document.getElementById('driveCurrentFolder');
+      if (folderBreadcrumbs.length === 0) {
+        currentDisplay.textContent = '📂 My Drive';
+        backBtn.hidden = true;
+      } else {
+        currentDisplay.textContent = '📂 ' + folderName;
+        backBtn.hidden = false;
+      }
+      updateSelectCurrentButtonState();
+    }
+
+    document.getElementById('driveBackBtn').addEventListener('click', () => {
+      if (folderBreadcrumbs.length > 0) {
+        folderBreadcrumbs.pop();
+        if (folderBreadcrumbs.length === 0) {
+          loadDriveFolders('root', 'My Drive');
+        } else {
+          const parent = folderBreadcrumbs[folderBreadcrumbs.length - 1];
+          loadDriveFolders(parent.id, parent.name);
+        }
+      }
+    });
+
+    // Selecting a destination is always "select whatever folder I'm currently
+    // browsing" — the button lives inline in the breadcrumb row so it never
+    // requires scrolling past the folder list to confirm.
+    document.getElementById('driveSelectCurrentBtn').addEventListener('click', () => {
+      selectDriveFolder(currentBrowseFolderId, getCurrentBreadcrumbPath());
+    });
+
+    function getCurrentBreadcrumbPath() {
+      if (folderBreadcrumbs.length === 0) return 'My Drive';
+      return 'My Drive > ' + folderBreadcrumbs.map(b => b.name).join(' > ');
+    }
+
+    function updateSelectCurrentButtonState() {
+      const btn = document.getElementById('driveSelectCurrentBtn');
+      if (!btn) return;
+      const isSelected = selectedDriveFolderId === currentBrowseFolderId;
+      btn.classList.toggle('selected', isSelected);
+      btn.textContent = isSelected ? `✓ Selected` : `✓ Select "${currentBrowseFolderName}"`;
+    }
+
+    function selectDriveFolder(folderId, folderPathStr) {
+      selectedDriveFolderId = folderId;
+      selectedDriveFolderPath = folderPathStr;
+
+      document.getElementById('selectedFolderBox').innerHTML = `
+        <div class="selected-folder-box">
+          <div class="label">SELECTED DESTINATION</div>
+          <div class="path">${escapeHtml(folderPathStr)}</div>
+        </div>
+      `;
+
+      updateSelectCurrentButtonState();
+      clearBanner('validationErrorsConnect');
+    }
+
+    // ============================================================
+    // Uploading screen (Phase 4)
+    // ============================================================
+    function displayUploading(parseResult, destFolderId, destFolderPath) {
+      document.getElementById('uploadDestLabel').textContent = `Converting notes and uploading to ${destFolderPath}.`;
+      document.getElementById('uploadFill').style.width = '0%';
+      document.getElementById('uploadStatusLeft').textContent = 'Preparing...';
+      document.getElementById('uploadStatusRight').textContent = '';
+      document.getElementById('uploadLog').innerHTML = '';
+      showScreen('screen-uploading');
+      startUpload(parseResult, destFolderId, destFolderPath);
+    }
+
+    function logUpload(message, type = 'info') {
+      const log = document.getElementById('uploadLog');
+      const timestamp = new Date().toLocaleTimeString();
+      const cls = type === 'error' ? 'error' : type === 'success' ? 'success' : '';
+      const entry = document.createElement('div');
+      entry.className = `entry ${cls}`;
+      entry.innerHTML = `<time>${timestamp}</time>${escapeHtml(message)}`;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function updateUploadProgress(current, total) {
+      const percent = Math.round((current / total) * 100);
+      document.getElementById('uploadFill').style.width = percent + '%';
+      document.getElementById('uploadStatusLeft').textContent = `Uploading ${current} of ${total} notes`;
+      document.getElementById('uploadStatusRight').textContent = `${percent}%`;
+    }
+
+    async function createDriveFolder(folderName, parentFolderId) {
+      const metadata = { name: folderName, mimeType: 'application/vnd.google-apps.folder', parents: [parentFolderId] };
+      const response = await fetch('https://www.googleapis.com/drive/v3/files', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${googleAccessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(metadata)
+      });
+      if (!response.ok) throw new Error(`Failed to create folder: ${response.status}`);
+      const result = await response.json();
+      return result.id;
+    }
+
+    async function startUpload(parseResult, destFolderId, destFolderPath) {
+      try {
+        if (!validatePhase4Upload(parseResult.notes.length)) return;
+
+        logUpload('Starting upload to: ' + destFolderPath, 'info');
+
+        const totalNotes = parseResult.notes.length;
+        let uploadedCount = 0;
+
+        const { Document, Packer, Paragraph, TextRun, ImageRun, HeadingLevel, LevelFormat } = await import('docx');
+
+        const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg', '.heic'];
+        const imageMap = {};
+        let imageCount = 0;
+        selectedFiles.forEach(file => {
+          const path = file.webkitRelativePath || file.name;
+          const isImage = imageExtensions.some(ext => path.toLowerCase().endsWith(ext));
+          if (isImage) {
+            imageMap[path] = file;
+            const filename = path.split('/').pop();
+            if (!imageMap[filename]) imageMap[filename] = file;
+            imageCount++;
+          }
+        });
+
+        logUpload(`Found ${parseResult.notes.length} notes to upload`, 'info');
+        logUpload(`Indexing ${imageCount} image files for embedding`, 'info');
+
+        const notesByFolder = {};
+        parseResult.notes.forEach(note => {
+          const folder = note.folderPath || 'Root';
+          if (!notesByFolder[folder]) notesByFolder[folder] = [];
+          notesByFolder[folder].push(note);
+        });
+
+        const folderNames = Object.keys(notesByFolder);
+        logUpload(`Notes organized into ${folderNames.length} folder(s)`, 'info');
+
+        const folderMapping = {};
+        for (const folderName of folderNames) {
+          try {
+            logUpload(`Creating folder: ${folderName}`, 'info');
+            const folderId = await createDriveFolder(folderName, destFolderId);
+            folderMapping[folderName] = folderId;
+            logUpload(`Folder created: ${folderName}`, 'success');
+          } catch (error) {
+            logUpload(`Failed to create folder ${folderName}: ${error.message}`, 'error');
+            throw error;
+          }
+        }
+
+        for (let i = 0; i < parseResult.notes.length; i++) {
+          const note = parseResult.notes[i];
+
+          const noteFolder = note.folderPath || 'Root';
+          const targetFolderId = folderMapping[noteFolder];
+          if (!targetFolderId) {
+            logUpload(`No folder mapping for "${noteFolder}"`, 'error');
+            continue;
+          }
+
+          try {
+            const blocks = note.blocks || [];
+
+            const docChildren = [
+              new Paragraph({
+                children: [new TextRun({ text: note.title || 'Untitled Note', font: 'Arial', size: 36, bold: true, italic: true })],
+                spacing: { after: 200 }
+              })
+            ];
+
+            function runsToTextRuns(runs) {
+              if (!runs || runs.length === 0) return [new TextRun({ text: '', font: 'Arial', size: 24 })];
+              return runs.map(run => {
+                if (run.isBreak) return new TextRun({ text: '', break: 1 });
+                return new TextRun({
+                  text: run.text || '',
+                  font: 'Arial',
+                  size: 24,
+                  bold: !!run.bold,
+                  italics: !!run.italic,
+                  underline: run.underline ? {} : undefined,
+                  strike: !!run.strikethrough,
+                });
+              });
+            }
+
+            const HEADING_LEVELS = [
+              HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3,
+              HeadingLevel.HEADING_4, HeadingLevel.HEADING_5, HeadingLevel.HEADING_6
+            ];
+
+            const numberedListIds = [...new Set(blocks.filter(b => b.type === 'numberedItem').map(b => b.listId))];
+            const numberingConfig = numberedListIds.map(listId => ({
+              reference: listId,
+              levels: Array.from({ length: 9 }, (_, level) => ({
+                level,
+                format: LevelFormat.DECIMAL,
+                text: `%${level + 1}.`,
+                alignment: 'start',
+                style: { paragraph: { indent: { left: 360 * (level + 1), hanging: 260 } } }
+              }))
+            }));
+
+            if (blocks.length > 0) {
+              const embeddedImages = [];
+              const missedImages = [];
+
+              for (const block of blocks) {
+                if (block.type === 'blank') {
+                  docChildren.push(new Paragraph({ text: '', spacing: { after: 200 } }));
+                } else if (block.type === 'heading') {
+                  docChildren.push(new Paragraph({ heading: HEADING_LEVELS[Math.min(block.level, 6) - 1], children: runsToTextRuns(block.runs), spacing: { after: 200 } }));
+                } else if (block.type === 'paragraph') {
+                  docChildren.push(new Paragraph({ children: runsToTextRuns(block.runs), spacing: { after: 200 } }));
+                } else if (block.type === 'blockquote') {
+                  docChildren.push(new Paragraph({ children: runsToTextRuns(block.runs), indent: { left: 720 }, spacing: { after: 200 } }));
+                } else if (block.type === 'bulletItem') {
+                  docChildren.push(new Paragraph({ children: runsToTextRuns(block.runs), bullet: { level: block.level }, spacing: { after: 100 } }));
+                } else if (block.type === 'numberedItem') {
+                  docChildren.push(new Paragraph({ children: runsToTextRuns(block.runs), numbering: { reference: block.listId, level: block.level }, spacing: { after: 100 } }));
+                } else if (block.type === 'image') {
+                  const imageSrc = block.src;
+                  try {
+                    let imageFile = imageMap[imageSrc];
+                    if (!imageFile) {
+                      const filename = imageSrc.split('/').pop();
+                      imageFile = imageMap[filename];
+                    }
+                    if (!imageFile) {
+                      for (const [key, file] of Object.entries(imageMap)) {
+                        if (key.toLowerCase() === imageSrc.toLowerCase() || key.toLowerCase().includes(imageSrc.toLowerCase())) { imageFile = file; break; }
+                      }
+                    }
+                    if (!imageFile) {
+                      const imageParts = imageSrc.split('/');
+                      const lastTwoParts = imageParts.slice(-2).join('/');
+                      for (const [key, file] of Object.entries(imageMap)) {
+                        if (key.endsWith(lastTwoParts) || key.includes(lastTwoParts)) { imageFile = file; break; }
+                      }
+                    }
+
+                    if (imageFile) {
+                      try {
+                        const buffer = await new Promise((resolve, reject) => {
+                          const reader = new FileReader();
+                          reader.onload = () => resolve(reader.result);
+                          reader.onerror = reject;
+                          reader.readAsArrayBuffer(imageFile);
+                        });
+                        const uint8Array = new Uint8Array(buffer);
+                        try {
+                          docChildren.push(new Paragraph({
+                            children: [new ImageRun({ data: uint8Array, transformation: { width: 360, height: 270 } })],
+                            spacing: { after: 200 }
+                          }));
+                          embeddedImages.push(imageSrc);
+                        } catch (imageRunError) {
+                          logUpload(`Could not embed image: ${imageSrc}`, 'error');
+                          missedImages.push(imageSrc);
+                        }
+                      } catch (imgError) {
+                        missedImages.push(imageSrc);
+                      }
+                    } else {
+                      missedImages.push(imageSrc);
+                      logUpload(`Image not found: ${imageSrc}`, 'error');
+                    }
+                  } catch (error) {
+                    missedImages.push(imageSrc);
+                  }
+                }
+              }
+
+              if (missedImages.length > 0) {
+                docChildren.push(new Paragraph({ text: '', spacing: { after: 200 } }));
+                docChildren.push(new Paragraph({
+                  children: [new TextRun({ text: '[Note: ' + missedImages.length + ' image(s) could not be embedded:', font: 'Arial', size: 24 })],
+                  spacing: { after: 100 }
+                }));
+                missedImages.forEach(img => {
+                  docChildren.push(new Paragraph({ children: [new TextRun({ text: '• ' + img, font: 'Arial', size: 24 })], spacing: { after: 100 } }));
+                });
+                docChildren.push(new Paragraph({ children: [new TextRun({ text: ']', font: 'Arial', size: 24 })], spacing: { after: 200 } }));
+              }
+
+              if (embeddedImages.length > 0) logUpload(`Embedded ${embeddedImages.length} image(s) in ${note.title}`, 'success');
+            } else {
+              docChildren.push(new Paragraph({ children: [new TextRun({ text: '(No content)', font: 'Arial', size: 24 })], spacing: { after: 200 } }));
+            }
+
+            const doc = new Document({
+              ...(numberingConfig.length > 0 ? { numbering: { config: numberingConfig } } : {}),
+              sections: [{ children: docChildren }]
+            });
+
+            const blob = await Packer.toBlob(doc);
+            const fileName = (note.title || 'Note') + '.docx';
+            await uploadFileToDrive(blob, fileName, targetFolderId);
+
+            uploadedCount++;
+            updateUploadProgress(uploadedCount, totalNotes);
+            logUpload(`Uploaded: ${fileName} to ${noteFolder}`, 'success');
+          } catch (error) {
+            logUpload(`Failed to upload ${note.title}: ${error.message}`, 'error');
+          }
+        }
+
+        logUpload(`Upload complete — ${uploadedCount}/${totalNotes} notes uploaded`, 'success');
+        showDone(uploadedCount, totalNotes, destFolderPath);
+      } catch (error) {
+        logUpload(`Upload error: ${error.message}`, 'error');
+        console.error('Upload failed:', error);
+        showDone(0, parseResult.notes.length, destFolderPath, error.message);
+      }
+    }
+
+    async function uploadFileToDrive(blob, fileName, folderId) {
+      const boundary = '===============1234567890==';
+      const metadata = { name: fileName, parents: [folderId] };
+
+      let body = `--${boundary}\r\n`;
+      body += 'Content-Type: application/json; charset=UTF-8\r\n\r\n';
+      body += JSON.stringify(metadata) + '\r\n';
+      body += `--${boundary}\r\n`;
+      body += 'Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document\r\n\r\n';
+
+      const encoder = new TextEncoder();
+      const headerPart = encoder.encode(body);
+      const footerPart = encoder.encode(`\r\n--${boundary}--`);
+
+      const fullBody = new Uint8Array(headerPart.length + blob.size + footerPart.length);
+      fullBody.set(new Uint8Array(headerPart), 0);
+      fullBody.set(new Uint8Array(await blob.arrayBuffer()), headerPart.length);
+      fullBody.set(new Uint8Array(footerPart), headerPart.length + blob.size);
+
+      const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${googleAccessToken}`, 'Content-Type': `multipart/related; boundary="${boundary}"` },
+        body: fullBody.buffer
+      });
+
+      if (!response.ok) {
+        const error = await response.text();
+        console.error('Upload error response:', error);
+        throw new Error(`Upload failed: ${response.status}`);
+      }
+      return await response.json();
+    }
+
+    // ============================================================
+    // Done screen (Phase 5)
+    // ============================================================
+    function showDone(uploadedCount, totalNotes, destFolderPath, errorMessage) {
+      const icon = document.getElementById('doneIcon');
+      const headline = document.getElementById('doneHeadline');
+      const subtext = document.getElementById('doneSubtext');
+      const driveLink = document.getElementById('doneDriveLink');
+
+      if (errorMessage && uploadedCount === 0) {
+        icon.textContent = '⚠';
+        icon.style.color = 'var(--color-error)';
+        headline.textContent = "Something went wrong";
+        headline.style.color = 'var(--color-error)';
+        subtext.textContent = errorMessage + ' — try again, or contact support if it keeps happening.';
+      } else if (uploadedCount < totalNotes) {
+        icon.textContent = '⚠';
+        icon.style.color = '#8A6013';
+        headline.textContent = `${uploadedCount} of ${totalNotes} notes made it to Google Docs`;
+        headline.style.color = '#8A6013';
+        subtext.textContent = 'Check the log for anything that failed, then try again if needed.';
+      } else {
+        icon.textContent = '✓';
+        icon.style.color = 'var(--color-success)';
+        headline.textContent = 'Your notes are in Google Docs';
+        headline.style.color = 'var(--color-success)';
+        subtext.textContent = `All ${totalNotes} notes uploaded to ${destFolderPath}.`;
+      }
+
+      driveLink.href = 'https://drive.google.com';
+      showScreen('screen-done');
+    }
+
+    document.getElementById('startOverBtn').addEventListener('click', () => {
+      selectedFiles = [];
+      lastParseResult = null;
+      selectedDriveFolderId = null;
+      selectedDriveFolderPath = 'My Drive';
+      folderBreadcrumbs = [];
+      dropzone.hidden = false;
+      folderSelected.hidden = true;
+      folderInput.value = '';
+      clearBanner('validationErrorsLanding');
+      showScreen('screen-landing');
+    });
+  </script>
+</body>
+</html>
