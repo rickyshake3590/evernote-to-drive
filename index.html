@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.min.js"></script>
   <style>
     :root {
       --color-cream: #FBF7F2;
@@ -1579,7 +1580,7 @@
         const totalNotes = parseResult.notes.length;
         let uploadedCount = 0;
 
-        const { Document, Packer, Paragraph, TextRun, ImageRun, HeadingLevel, LevelFormat } = await import('docx');
+        const { Document, Packer, Paragraph, TextRun, ImageRun, HeadingLevel, LevelFormat } = docx;
 
         const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg', '.heic'];
         const imageMap = {};
