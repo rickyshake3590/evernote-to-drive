@@ -24,82 +24,6 @@ A secure, privacy-first web application that migrates Evernote notes to Google D
 - Dark/light mode support
 - Plain-language error messages
 
-## Setup & Deployment
-
-### Configuration
-
-Before deploying, you must configure your credentials in `config.js`:
-
-```javascript
-// config.js
-window.__APP_PASSWORD = 'your-secure-password';
-window.__GOOGLE_CLIENT_ID = 'your-google-client-id';
-```
-
-Or copy `.env.example` to `.env.local` for reference.
-
-**Important:** Never commit real credentials to version control. Keep `config.js` or `.env` files in `.gitignore` when using real credentials.
-
-### Getting Google OAuth Credentials
-
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project
-3. Enable **Google Drive API**
-4. Create **OAuth 2.0 Web credentials**
-5. Add authorized redirect URIs:
-   - For GitHub Pages: `https://yourusername.github.io/evernote-to-drive/`
-   - For local dev: `http://localhost:5173`
-6. Copy your Client ID to `config.js`
-
-### Local Development
-
-```bash
-# Install dependencies
-npm install
-
-# Start dev server (port 5173)
-npm run dev
-
-# Run tests
-npm test
-
-# Build for production
-npm run build
-```
-
-### GitHub Pages Deployment
-
-1. **Update config.js** with your credentials and authorized URIs
-2. **Push to GitHub:**
-   ```bash
-   git add .
-   git commit -m "Configure for deployment"
-   git push origin main
-   ```
-3. **Enable GitHub Pages:**
-   - Go to Settings → Pages
-   - Source: Deploy from a branch
-   - Branch: `main` / `/(root)`
-   - Save
-
-Your app will be live at: `https://yourusername.github.io/evernote-to-drive/`
-
-### Alternative Deployments
-
-**Netlify** (recommended for easier env var management)
-```bash
-npm run build
-# Deploy the dist/ folder to Netlify
-# Set environment variables in Netlify UI
-```
-
-**Vercel**
-```bash
-npm run build
-# Deploy to Vercel via CLI or Git integration
-# Set environment variables in Vercel dashboard
-```
-
 ## Usage
 
 1. **Export from Evernote:** Export your notes as HTML from Evernote's desktop app
@@ -126,8 +50,7 @@ npm run build
 ## Troubleshooting
 
 **"Incorrect password"**
-- Check the password in `config.js`
-- Default: `byeevernote`
+- Check the password in `config.js` or ask the developer
 
 **"Couldn't load folders"**
 - Verify your Google Client ID is correct
