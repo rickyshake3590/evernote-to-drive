@@ -10,15 +10,8 @@ permissions:
   pages: write
   id-token: write
 
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
-
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -29,24 +22,36 @@ jobs:
           APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
           GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
         run: |
+          # Check if secrets are set (they should be for deployment to work)
+          if [ -z "$APP_PASSWORD" ] || [ -z "$GOOGLE_CLIENT_ID" ]; then
+            echo "ERROR: GitHub Secrets not configured!"
+            echo "Please set APP_PASSWORD and GOOGLE_CLIENT_ID in Settings → Secrets and variables → Actions"
+            exit 1
+          fi
+
           # Replace placeholders in config.js
-          sed -i "s/APP_PASSWORD_PLACEHOLDER/$APP_PASSWORD/g" config.js
-          sed -i "s/GOOGLE_CLIENT_ID_PLACEHOLDER/$GOOGLE_CLIENT_ID/g" config.js
+          sed -i "s|APP_PASSWORD_PLACEHOLDER|$APP_PASSWORD|g" config.js
+          sed -i "s|GOOGLE_CLIENT_ID_PLACEHOLDER|$GOOGLE_CLIENT_ID|g" config.js
 
           # Replace placeholders in index.html
-          sed -i "s/APP_PASSWORD_PLACEHOLDER/$APP_PASSWORD/g" index.html
-          sed -i "s/GOOGLE_CLIENT_ID_PLACEHOLDER/$GOOGLE_CLIENT_ID/g" index.html
+          sed -i "s|APP_PASSWORD_PLACEHOLDER|$APP_PASSWORD|g" index.html
+          sed -i "s|GOOGLE_CLIENT_ID_PLACEHOLDER|$GOOGLE_CLIENT_ID|g" index.html
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Upload artifact
+      - name: Upload artifact for Pages
         uses: actions/upload-pages-artifact@v3
         with:
           path: '.'
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
