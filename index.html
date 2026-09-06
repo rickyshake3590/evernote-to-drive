@@ -8,21 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script>
-    // Load docx library and make it globally available
-    (async () => {
-      const script = document.createElement('script');
-      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.min.js';
-      script.onload = () => {
-        // docx should now be available as a global
-        window.docxReady = true;
-      };
-      script.onerror = () => {
-        console.error('Failed to load docx library');
-      };
-      document.head.appendChild(script);
-    })();
-  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <style>
     :root {
       --color-cream: #FBF7F2;
@@ -1585,6 +1571,48 @@
       return result.id;
     }
 
+    async function generateDocxBlob(title, blocks) {
+      const zip = new JSZip();
+
+      // Create folder structure
+      zip.folder('_rels');
+      zip.folder('word').folder('_rels');
+      zip.folder('word/media');
+      zip.folder('customXml');
+      zip.folder('[Content_Types]');
+
+      // Generate document.xml content
+      let documentXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+      documentXml += '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">';
+      documentXml += '<w:body>';
+
+      blocks.forEach(block => {
+        if (block.type === 'title' && block.text) {
+          documentXml += '<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="32"/></w:rPr><w:t>' + escapeXml(block.text) + '</w:t></w:r></w:p>';
+        } else if (block.type === 'heading' && block.text) {
+          documentXml += '<w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="28"/></w:rPr><w:t>' + escapeXml(block.text) + '</w:t></w:r></w:p>';
+        } else if (block.type === 'bullet' && block.text) {
+          documentXml += '<w:p><w:pPr><w:numPr><w:ilvl w:val="' + (block.level || 0) + '"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t>' + escapeXml(block.text) + '</w:t></w:r></w:p>';
+        } else if (block.type === 'text' && block.text) {
+          documentXml += '<w:p><w:r><w:t>' + escapeXml(block.text) + '</w:t></w:r></w:p>';
+        }
+      });
+
+      documentXml += '</w:body></w:document>';
+
+      zip.file('word/document.xml', documentXml);
+      zip.file('[Content_Types].xml', '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>');
+      zip.file('_rels/.rels', '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>');
+      zip.file('word/_rels/document.xml.rels', '<?xml version="1.0"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>');
+
+      return await zip.generateAsync({type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+    }
+
+    function escapeXml(text) {
+      if (!text) return '';
+      return String(text).replace(/[<>&'"]/g, c => ({'<': '&lt;', '>': '&gt;', '&': '&amp;', "'": '&apos;', '"': '&quot;'}[c]));
+    }
+
     async function startUpload(parseResult, destFolderId, destFolderPath) {
       try {
         if (!validatePhase4Upload(parseResult.notes.length)) return;
@@ -1594,13 +1622,11 @@
         const totalNotes = parseResult.notes.length;
         let uploadedCount = 0;
 
-        // Ensure docx library is available
-        if (!window.docxReady || typeof window.docx === 'undefined') {
-          logUpload('DOCX library loading... Please wait a moment and try again.', 'error');
+        // Ensure JSZip library is available
+        if (typeof JSZip === 'undefined') {
+          logUpload('Required libraries loading... Please wait a moment and try again.', 'error');
           return;
         }
-
-        const { Document, Packer, Paragraph, TextRun, ImageRun, HeadingLevel, LevelFormat } = window.docx;
 
         const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg', '.heic'];
         const imageMap = {};
@@ -1782,12 +1808,17 @@
               docChildren.push(new Paragraph({ children: [new TextRun({ text: '(No content)', font: 'Arial', size: 24 })], spacing: { after: 200 } }));
             }
 
-            const doc = new Document({
-              ...(numberingConfig.length > 0 ? { numbering: { config: numberingConfig } } : {}),
-              sections: [{ children: docChildren }]
+            // Convert docChildren to simple blocks for DOCX generation
+            const docBlocks = [];
+            docBlocks.push({ type: 'title', text: note.title || 'Note' });
+            docChildren.forEach(para => {
+              if (para.children && para.children.length > 0) {
+                const text = para.children.map(c => c.text || '').join('');
+                docBlocks.push({ type: 'text', text: text });
+              }
             });
 
-            const blob = await Packer.toBlob(doc);
+            const blob = await generateDocxBlob(note.title || 'Note', docBlocks);
             const fileName = (note.title || 'Note') + '.docx';
             await uploadFileToDrive(blob, fileName, targetFolderId);
 
