@@ -4,6 +4,8 @@ dist/
 .DS_Store
 .env
 .env.local
+.env.*.local
+config.local.js
 index-backup.html
 index-modern.html
 index-redesigned.html

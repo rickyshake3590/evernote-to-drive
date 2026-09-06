@@ -631,6 +631,9 @@
     </section>
   </div>
 
+  <!-- Load configuration (credentials) from config.js -->
+  <script src="config.js"></script>
+
   <script type="module">
     // ============================================================
     // State
@@ -668,7 +671,7 @@
     const loginBtn = document.getElementById('loginBtn');
     const loginError = document.getElementById('loginError');
     const page = document.querySelector('.page');
-    const CORRECT_PASSWORD = 'byeevernote';
+    const CORRECT_PASSWORD = window.__APP_PASSWORD || 'byeevernote';
 
     function handleLogin() {
       loginError.classList.remove('show');
@@ -1356,8 +1359,9 @@
       }
 
       try {
+        const clientId = window.__GOOGLE_CLIENT_ID || '346028058051-elmqlvgkhjo94jt4a0hsb7res3dlcnm0.apps.googleusercontent.com';
         googleTokenClient = google.accounts.oauth2.initTokenClient({
-          client_id: '346028058051-elmqlvgkhjo94jt4a0hsb7res3dlcnm0.apps.googleusercontent.com',
+          client_id: clientId,
           scope: 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/userinfo.email',
           callback: handleTokenResponse
         });
