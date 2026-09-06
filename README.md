@@ -50,8 +50,7 @@ A secure, privacy-first web application that migrates Evernote notes to Google D
 ## Troubleshooting
 
 **"Incorrect password"**
-- Check the password in `config.js`
-- Default: `byeevernote`
+- Check the password in `config.js` or ask the developer
 
 **"Couldn't load folders"**
 - Verify your Google Client ID is correct
