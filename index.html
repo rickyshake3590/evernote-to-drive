@@ -8,7 +8,21 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="https://cdn.jsdelivr.net/npm/docx"></script>
+  <script>
+    // Load docx library and make it globally available
+    (async () => {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.min.js';
+      script.onload = () => {
+        // docx should now be available as a global
+        window.docxReady = true;
+      };
+      script.onerror = () => {
+        console.error('Failed to load docx library');
+      };
+      document.head.appendChild(script);
+    })();
+  </script>
   <style>
     :root {
       --color-cream: #FBF7F2;
@@ -1580,8 +1594,9 @@
         const totalNotes = parseResult.notes.length;
         let uploadedCount = 0;
 
-        if (typeof window.docx === 'undefined') {
-          logUpload('DOCX library is loading... Please wait and try again.', 'error');
+        // Ensure docx library is available
+        if (!window.docxReady || typeof window.docx === 'undefined') {
+          logUpload('DOCX library loading... Please wait a moment and try again.', 'error');
           return;
         }
 
