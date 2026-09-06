@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/8.4.2/docx.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
   <style>
     :root {
       --color-cream: #FBF7F2;
@@ -1571,16 +1571,30 @@
       return result.id;
     }
 
-async function startUpload(parseResult, destFolderId, destFolderPath) {
+    async function getDocxLibrary() {
+      let attempts = 0;
+      while (typeof window.docx === 'undefined' && attempts < 30) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+      }
+      if (typeof window.docx === 'undefined') {
+        throw new Error('DOCX library failed to load. Please refresh the page and try again.');
+      }
+      return window.docx;
+    }
+
+    async function startUpload(parseResult, destFolderId, destFolderPath) {
       try {
         if (!validatePhase4Upload(parseResult.notes.length)) return;
 
         logUpload('Starting upload to: ' + destFolderPath, 'info');
+        logUpload('Loading document library...', 'info');
 
         const totalNotes = parseResult.notes.length;
         let uploadedCount = 0;
 
-        const { Document, Packer, Paragraph, TextRun, ImageRun, HeadingLevel, LevelFormat } = docx;
+        const docxLib = await getDocxLibrary();
+        const { Document, Packer, Paragraph, TextRun, ImageRun, HeadingLevel, LevelFormat } = docxLib;
 
         const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg', '.heic'];
         const imageMap = {};
