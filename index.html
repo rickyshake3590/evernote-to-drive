@@ -1680,147 +1680,53 @@
 
           try {
             const blocks = note.blocks || [];
+            const docBlocks = [];
 
-            const docChildren = [
-              new Paragraph({
-                children: [new TextRun({ text: note.title || 'Untitled Note', font: 'Arial', size: 36, bold: true, italic: true })],
-                spacing: { after: 200 }
-              })
-            ];
+            // Add title
+            docBlocks.push({ type: 'title', text: note.title || 'Untitled Note' });
 
-            function runsToTextRuns(runs) {
-              if (!runs || runs.length === 0) return [new TextRun({ text: '', font: 'Arial', size: 24 })];
-              return runs.map(run => {
-                if (run.isBreak) return new TextRun({ text: '', break: 1 });
-                return new TextRun({
-                  text: run.text || '',
-                  font: 'Arial',
-                  size: 24,
-                  bold: !!run.bold,
-                  italics: !!run.italic,
-                  underline: run.underline ? {} : undefined,
-                  strike: !!run.strikethrough,
-                });
-              });
-            }
-
-            const HEADING_LEVELS = [
-              HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3,
-              HeadingLevel.HEADING_4, HeadingLevel.HEADING_5, HeadingLevel.HEADING_6
-            ];
-
-            const numberedListIds = [...new Set(blocks.filter(b => b.type === 'numberedItem').map(b => b.listId))];
-            const numberingConfig = numberedListIds.map(listId => ({
-              reference: listId,
-              levels: Array.from({ length: 9 }, (_, level) => ({
-                level,
-                format: LevelFormat.DECIMAL,
-                text: `%${level + 1}.`,
-                alignment: 'start',
-                style: { paragraph: { indent: { left: 360 * (level + 1), hanging: 260 } } }
-              }))
-            }));
-
+            // Extract text from blocks
             if (blocks.length > 0) {
-              const embeddedImages = [];
-              const missedImages = [];
-
               for (const block of blocks) {
                 if (block.type === 'blank') {
-                  docChildren.push(new Paragraph({ text: '', spacing: { after: 200 } }));
+                  // Skip blank blocks or add spacing
+                  continue;
                 } else if (block.type === 'heading') {
-                  docChildren.push(new Paragraph({ heading: HEADING_LEVELS[Math.min(block.level, 6) - 1], children: runsToTextRuns(block.runs), spacing: { after: 200 } }));
+                  const text = (block.runs || []).map(r => r.text || '').join('');
+                  docBlocks.push({ type: 'heading', text: text, level: block.level || 1 });
                 } else if (block.type === 'paragraph') {
-                  docChildren.push(new Paragraph({ children: runsToTextRuns(block.runs), spacing: { after: 200 } }));
+                  const text = (block.runs || []).map(r => r.text || '').join('');
+                  if (text) docBlocks.push({ type: 'text', text: text });
                 } else if (block.type === 'blockquote') {
-                  docChildren.push(new Paragraph({ children: runsToTextRuns(block.runs), indent: { left: 720 }, spacing: { after: 200 } }));
+                  const text = (block.runs || []).map(r => r.text || '').join('');
+                  if (text) docBlocks.push({ type: 'text', text: '> ' + text });
                 } else if (block.type === 'bulletItem') {
-                  docChildren.push(new Paragraph({ children: runsToTextRuns(block.runs), bullet: { level: block.level }, spacing: { after: 100 } }));
+                  const text = (block.runs || []).map(r => r.text || '').join('');
+                  if (text) docBlocks.push({ type: 'bullet', text: text, level: block.level || 0 });
                 } else if (block.type === 'numberedItem') {
-                  docChildren.push(new Paragraph({ children: runsToTextRuns(block.runs), numbering: { reference: block.listId, level: block.level }, spacing: { after: 100 } }));
+                  const text = (block.runs || []).map(r => r.text || '').join('');
+                  if (text) docBlocks.push({ type: 'text', text: text });
                 } else if (block.type === 'image') {
-                  const imageSrc = block.src;
-                  try {
-                    let imageFile = imageMap[imageSrc];
-                    if (!imageFile) {
-                      const filename = imageSrc.split('/').pop();
-                      imageFile = imageMap[filename];
-                    }
-                    if (!imageFile) {
-                      for (const [key, file] of Object.entries(imageMap)) {
-                        if (key.toLowerCase() === imageSrc.toLowerCase() || key.toLowerCase().includes(imageSrc.toLowerCase())) { imageFile = file; break; }
-                      }
-                    }
-                    if (!imageFile) {
-                      const imageParts = imageSrc.split('/');
-                      const lastTwoParts = imageParts.slice(-2).join('/');
-                      for (const [key, file] of Object.entries(imageMap)) {
-                        if (key.endsWith(lastTwoParts) || key.includes(lastTwoParts)) { imageFile = file; break; }
-                      }
-                    }
-
-                    if (imageFile) {
-                      try {
-                        const buffer = await new Promise((resolve, reject) => {
-                          const reader = new FileReader();
-                          reader.onload = () => resolve(reader.result);
-                          reader.onerror = reject;
-                          reader.readAsArrayBuffer(imageFile);
-                        });
-                        const uint8Array = new Uint8Array(buffer);
-                        try {
-                          docChildren.push(new Paragraph({
-                            children: [new ImageRun({ data: uint8Array, transformation: { width: 360, height: 270 } })],
-                            spacing: { after: 200 }
-                          }));
-                          embeddedImages.push(imageSrc);
-                        } catch (imageRunError) {
-                          logUpload(`Could not embed image: ${imageSrc}`, 'error');
-                          missedImages.push(imageSrc);
-                        }
-                      } catch (imgError) {
-                        missedImages.push(imageSrc);
-                      }
-                    } else {
-                      missedImages.push(imageSrc);
-                      logUpload(`Image not found: ${imageSrc}`, 'error');
-                    }
-                  } catch (error) {
-                    missedImages.push(imageSrc);
-                  }
+                  docBlocks.push({ type: 'text', text: '[Image: ' + block.src + ']' });
                 }
               }
-
-              if (missedImages.length > 0) {
-                docChildren.push(new Paragraph({ text: '', spacing: { after: 200 } }));
-                docChildren.push(new Paragraph({
-                  children: [new TextRun({ text: '[Note: ' + missedImages.length + ' image(s) could not be embedded:', font: 'Arial', size: 24 })],
-                  spacing: { after: 100 }
-                }));
-                missedImages.forEach(img => {
-                  docChildren.push(new Paragraph({ children: [new TextRun({ text: '• ' + img, font: 'Arial', size: 24 })], spacing: { after: 100 } }));
-                });
-                docChildren.push(new Paragraph({ children: [new TextRun({ text: ']', font: 'Arial', size: 24 })], spacing: { after: 200 } }));
-              }
-
-              if (embeddedImages.length > 0) logUpload(`Embedded ${embeddedImages.length} image(s) in ${note.title}`, 'success');
             } else {
-              docChildren.push(new Paragraph({ children: [new TextRun({ text: '(No content)', font: 'Arial', size: 24 })], spacing: { after: 200 } }));
+              docBlocks.push({ type: 'text', text: '(No content)' });
             }
 
-            // Convert docChildren to simple blocks for DOCX generation
-            const docBlocks = [];
-            docBlocks.push({ type: 'title', text: note.title || 'Note' });
-            docChildren.forEach(para => {
-              if (para.children && para.children.length > 0) {
-                const text = para.children.map(c => c.text || '').join('');
-                docBlocks.push({ type: 'text', text: text });
-              }
-            });
+            try {
+              logUpload(`Generating DOCX for: ${note.title}`, 'info');
+              const blob = await generateDocxBlob(note.title || 'Note', docBlocks);
+              logUpload(`DOCX generated (${blob.size} bytes)`, 'info');
 
-            const blob = await generateDocxBlob(note.title || 'Note', docBlocks);
-            const fileName = (note.title || 'Note') + '.docx';
-            await uploadFileToDrive(blob, fileName, targetFolderId);
+              const fileName = (note.title || 'Note') + '.docx';
+              logUpload(`Uploading to Google Drive: ${fileName}`, 'info');
+              await uploadFileToDrive(blob, fileName, targetFolderId);
+            } catch (docError) {
+              logUpload(`DOCX generation/upload error: ${docError.message}`, 'error');
+              console.error('DOCX error details:', docError);
+              throw docError;
+            }
 
             uploadedCount++;
             updateUploadProgress(uploadedCount, totalNotes);
